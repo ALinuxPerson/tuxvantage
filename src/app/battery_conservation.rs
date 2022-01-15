@@ -1,0 +1,235 @@
+mod private {
+    pub trait Sealed {}
+}
+
+use std::fmt::Debug;
+use std::thread;
+use crate::app::IntoOptionMachineOutput;
+use anyhow::{anyhow, Context};
+use ideapad::Handler;
+use owo_colors::OwoColorize;
+use parking_lot::RwLockWriteGuard;
+use ::log::LevelFilter;
+
+use crate::args::FromStrHandler;
+use crate::ext::AnyhowResultExt;
+use crate::{anyhow_with_tip, config, context, log, verbose};
+use crate::config::{BatteryConfig, BatteryLevel, BatteryMatches, CoolDown};
+use crate::log::Level;
+use crate::utils::{DisplaySerializer, FromStrDeserializer};
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum MachineOutput {
+    Enabled { enabled: bool },
+    Disabled { disabled: bool },
+}
+
+impl IntoOptionMachineOutput<MachineOutput> for MachineOutput {
+    fn into_option_machine_output(self) -> Option<MachineOutput> {
+        Some(self)
+    }
+}
+
+pub fn enabled() -> anyhow_with_tip::Result<MachineOutput> {
+    debug!("get battery conservation enabled value");
+    let enabled = ideapad::battery_conservation::enabled(context::get())
+        .context("failed to get battery conservation mode value")
+        .maybe_acpi_call_tip()?;
+    let what = if enabled {
+        "enabled".bold().green().to_string()
+    } else {
+        "disabled".bold().red().to_string()
+    };
+
+    if !config::machine() {
+        info!("battery conservation is {}", what);
+    }
+
+    Ok(MachineOutput::Enabled { enabled })
+}
+
+pub fn disabled() -> anyhow_with_tip::Result<MachineOutput> {
+    debug!("get battery conservation disabled value");
+    let disabled = ideapad::battery_conservation::disabled(context::get())
+        .context("failed to get battery conservation mode value")
+        .maybe_acpi_call_tip()?;
+    let what = if disabled {
+        "disabled".bold().green().to_string()
+    } else {
+        "enabled".bold().red().to_string()
+    };
+
+    if !config::machine() {
+        info!("battery conservation is {}", what);
+    }
+
+    Ok(MachineOutput::Disabled { disabled })
+}
+
+pub fn enable(handler: Option<FromStrHandler>) -> anyhow_with_tip::Result<()> {
+    let mut config = config::write();
+
+    debug!("setup argument override for battery conservation handler from config");
+    config.tuxvantage.overrides.handlers.battery_conservation = handler.map(|handler| handler.0);
+
+    let config = RwLockWriteGuard::downgrade(config);
+    let handler = config.tuxvantage.handlers().battery_conservation();
+    let machine = config.tuxvantage.machine();
+
+    if !machine {
+        info!(
+            "trying to enable battery conservation with handler {}",
+            super::format_handler(handler)
+        );
+
+        if let Handler::Ignore = handler {
+            warn!("use this handler with care; if rapid charge is already enabled this will strain the battery")
+        }
+    }
+
+    debug!("enable battery conservation with handler {:?}", handler);
+    context::get()
+        .controllers()
+        .battery_conservation()
+        .enable()
+        .handler(handler)
+        .now()
+        .context("failed to enable battery conservation")
+        .maybe_acpi_call_tip()?;
+
+    if !machine {
+        info!("enabled battery conservation");
+    }
+
+    Ok(())
+}
+
+pub fn disable() -> anyhow_with_tip::Result<()> {
+    debug!("disable battery conservation");
+    ideapad::battery_conservation::disable(context::get())
+        .context("failed to disable battery conservation")
+        .maybe_acpi_call_tip()?;
+
+    if !config::machine() {
+        info!("disabled battery conservation");
+    }
+
+    Ok(())
+}
+
+pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, matches: Option<BatteryMatches>) -> anyhow_with_tip::Result<()> {
+    let mut config = config::write();
+    config.tuxvantage.overrides.battery = BatteryConfig {
+        threshold: Some(FromStrDeserializer(DisplaySerializer(threshold))),
+        cooldown: Some(FromStrDeserializer(DisplaySerializer(cooldown))),
+        infallible,
+        matches,
+    };
+    let battery_config = config.tuxvantage.battery_config();
+    let (battery, errors) = battery_config.get()
+        .context("failed to get battery")?;
+
+    if !errors.is_empty() {
+        warn!("errors occurred while retrieving battery information, see below");
+
+        for error in errors {
+            warn!("{}", error);
+        }
+    }
+
+    let mut battery = match battery {
+        Some(battery) => battery,
+        None => {
+            info!("failed to get battery information, here are the list of batteries that you could use");
+            let r#try = || -> anyhow::Result<()> {
+                let manager = battery::Manager::new()
+                    .context("failed to create battery manager")?;
+                let batteries = manager.batteries()
+                    .context("failed to get list of batteries")?;
+                let mut first = true;
+
+                {
+                    let _guard = log::no_prologue::guard_for(Level::Info);
+                    for (index, battery) in batteries.enumerate() {
+                        let battery = match battery {
+                            Ok(battery) => battery,
+                            Err(error) => {
+                                warn!("skipping battery due to an error: {}", error);
+                                continue
+                            }
+                        };
+
+                        if first {
+                            info!("{} {}", format_args!("#{}", index).bold(), "(first)".italic());
+                            first = false
+                        } else {
+                            info!("{}", format_args!("#{}", index).bold())
+                        }
+
+                        info!("{}{} {}", super::tab(2), "Vendor".bold(), battery.vendor().unwrap_or("N/A"));
+                        info!("{}{} {}", super::tab(2), "Model".bold(), battery.model().unwrap_or("N/A"));
+                        info!("{}{} {}", super::tab(2), "Serial Number".bold(), battery.serial_number().unwrap_or("N/A"));
+                    }
+                }
+
+                Ok(())
+            };
+
+            if let Err(error) = r#try() {
+                let error = error.context("failed to display list of batteries");
+                warn!("{:#}", error)
+            }
+
+            return Err(anyhow!("failed to get battery information").into())
+        }
+    };
+
+    let level_filter = if verbose::get() {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+
+    env_logger::Builder::new()
+        .filter_level(level_filter)
+        .init();
+
+    let cooldown = battery_config.cooldown().0;
+    let threshold = battery_config.threshold().inner();
+    let handler = config.tuxvantage.handlers().battery_conservation();
+    let mut battery_conservation = context::get().controllers().battery_conservation();
+
+    ::log::info!("the cooldown is {} second(s)", cooldown.as_secs_f64());
+    ::log::info!("the threshold for the battery is {}%", threshold);
+
+    loop {
+        let battery_level = (battery.state_of_charge().value * 100.0).round() as u8;
+        ::log::info!("current battery level is {}%", battery_level);
+
+        let battery_level_ge_threshold = battery_level >= threshold;
+        ::log::debug!("battery level >= threshold = {}", battery_level_ge_threshold);
+
+        if battery_level >= threshold {
+            ::log::info!("battery level is greater than or equal to the provided threshold, enabling battery conservation mode");
+            battery_conservation.enable()
+                .handler(handler)
+                .now()
+                .context("failed to enable battery conservation")
+                .maybe_acpi_call_tip()?
+        } else {
+            ::log::info!("battery level is less than the provided threshold, disabling battery conservation mode");
+            battery_conservation.disable()
+                .context("failed to disable battery conservation")
+                .maybe_acpi_call_tip()?
+        }
+
+        ::log::info!("refreshing battery");
+        if let Err(error) = battery.refresh() {
+            ::log::warn!("failed to refresh battery: {}", error)
+        }
+
+        ::log::debug!("sleeping for {} second(s)", cooldown.as_secs_f64());
+        thread::sleep(cooldown)
+    }
+}
