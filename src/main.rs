@@ -232,7 +232,7 @@ fn main() {
     let panic = PANIC.load(Ordering::SeqCst);
 
     if panic {
-        debug!("was told to panic, so panicking now");
+        debug!("was told to panic, so panicking now (if any error occurred)");
         result.as_ref().unwrap();
     }
 
