@@ -240,7 +240,7 @@ fn main() {
         Ok(machine_output) => {
             if machine {
                 let output = Machine::success(machine_output)
-                    .pipe(|machine| serde_json::to_string(&machine))
+                    .pipe_ref(serde_json::to_string)
                     .expect("failed to serialize machine output");
 
                 println!("{}", output);
@@ -251,7 +251,7 @@ fn main() {
         Err(error) => {
             if machine {
                 let output = Machine::<()>::failure(error)
-                    .pipe(|machine| serde_json::to_string(&machine))
+                    .pipe_ref(serde_json::to_string)
                     .expect("failed to serialize machine output");
 
                 println!("{}", output);
