@@ -341,6 +341,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 [[package]]
 name = "ideapad"
 version = "0.1.0"
+source = "git+https://github.com/ALinuxPerson/ideapad.git#7002964620c605ae814d8ac61f2458b7eb9fcebc"
 dependencies = [
  "crossbeam",
  "once_cell",
