@@ -237,7 +237,7 @@ fn main() {
     }
 
     let machine = MACHINE.load(Ordering::SeqCst);
-    debug!("after main function, machine is {:?}", machine);
+    debug!("after main function, machine is {machine}");
 
     let backtrace = BACKTRACE.load(Ordering::SeqCst);
     let panic = PANIC.load(Ordering::SeqCst);
@@ -260,7 +260,7 @@ fn main() {
             0
         }
         Err(error) => {
-            debug!("debug representation of the main error:\n {:#?}", error);
+            debug!("debug representation of the main error:\n {error:#?}");
             if machine {
                 let output = Machine::<()>::failure(error)
                     .pipe_ref(serde_json::to_string)
