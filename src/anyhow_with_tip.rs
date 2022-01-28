@@ -3,11 +3,12 @@ use std::fmt::Display;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
+#[derive(Copy, Clone)]
 enum NullDisplay {}
 
 impl Display for NullDisplay {
     fn fmt(&self, _: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Ok(())
+        match *self {}
     }
 }
 
