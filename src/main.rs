@@ -28,7 +28,7 @@ use parking_lot::RwLockWriteGuard;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{io, process, thread};
-use ideapad::{fallible_drop_strategy, FallibleDropStrategies, Profile};
+use ideapad::{FallibleDropStrategies, Profile};
 use tap::Pipe;
 use ideapad::context::Context;
 

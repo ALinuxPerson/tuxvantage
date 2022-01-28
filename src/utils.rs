@@ -3,7 +3,7 @@ use itertools::Itertools;
 use std::ops::Not;
 use std::str::FromStr;
 use serde::{de, Deserialize, Serialize};
-use tap::Pipe;
+
 
 pub fn dedup_error_chain_for_humans(error: anyhow::Error) -> String {
     error.chain().map(ToString::to_string).unique().join(": ")

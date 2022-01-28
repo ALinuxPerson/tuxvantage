@@ -1,13 +1,13 @@
-use std::fmt;
-use std::ops::RangeInclusive;
+
+
 use std::str::FromStr;
-use std::time::Duration;
-use anyhow::Context;
+
+
 
 use crate::config::{Backtrace, BatteryLevel, BatteryMatches, CoolDown, Machine};
 use clap::Parser;
 use ideapad::{Handler, SystemPerformanceMode};
-use tap::Pipe;
+
 
 #[derive(Debug)]
 pub struct FromStrHandler(pub Handler);
