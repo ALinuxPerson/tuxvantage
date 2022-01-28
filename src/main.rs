@@ -134,7 +134,7 @@ fn main() {
                     debug!("start drop strategy receiver thread");
                     for error in receiver {
                         error!("failed to drop something: {}", error);
-                        debug!("debug representation of the drop error: {:#?}", error);
+                        debug!("debug representation of the drop error:\n {:#?}", error);
                     }
                 });
 
@@ -253,7 +253,7 @@ fn main() {
             0
         }
         Err(error) => {
-            debug!("debug representation of the main error: {:#?}", error);
+            debug!("debug representation of the main error:\n {:#?}", error);
             if machine {
                 let output = Machine::<()>::failure(error)
                     .pipe_ref(serde_json::to_string)
