@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{env, fmt, fs};
 use std::time::Duration;
 use battery::{Batteries, Battery};
+use owo_colors::OwoColorize;
 use tap::{Pipe, Tap};
 
 use crate::project_paths;
@@ -216,7 +217,8 @@ impl FromStr for Backtrace {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (panics, errors) = s.split_once(',').context("expected ',' delimiter")?;
+        let (panics, errors) = s.split_once(',')
+            .with_context(|| format!("expected {} delimiter", ','.bold()))?;
         let panics = panics
             .parse::<u8>()
             .context("expected 'panics' to be a number")?
@@ -246,7 +248,7 @@ impl FromStr for Machine {
             "always" | "true" | "t" => Self::Always,
             "never" | "false" | "f" => Self::Never,
             "auto" | "a" => Self::Auto,
-            _ => anyhow::bail!("invalid machine choice '{}'", s),
+            _ => anyhow::bail!("invalid machine choice {}", s.bold()),
         })
     }
 }
@@ -278,7 +280,7 @@ impl FromStr for BatteryLevel {
             .parse::<u8>()
             .context("number given wasn't valid")?
             .pipe(Self::new)
-            .with_context(|| format!("{}% is out of bounds (must be within 0 and 100 inclusive)", s))
+            .with_context(|| format!("{} is out of bounds (must be within 0 and 100 inclusive)", format_args!("{}%", s.bold())))
     }
 }
 
@@ -405,7 +407,8 @@ impl FromStr for BatteryMatches {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.split_once('=').context("delimit the variant and value with '='")? {
+        match s.split_once('=')
+            .with_context(|| format!("delimit the variant and value with {}", '='.bold()))? {
             ("first" | "f", _) => Ok(BatteryMatches::First),
             ("index" | "i", value) => value.parse()
                 .context("value wasn't a valid integer")
@@ -413,7 +416,7 @@ impl FromStr for BatteryMatches {
             ("vendor" | "v", value) => Ok(BatteryMatches::Vendor(value.to_string())),
             ("model" | "m", value) => Ok(BatteryMatches::Model(value.to_string())),
             ("serial_number" | "sn" | "s", value) => Ok(BatteryMatches::SerialNumber(value.to_string())),
-            (variant, value) => anyhow::bail!("unknown variant '{}' with value '{}' passed", variant, value)
+            (variant, value) => anyhow::bail!("unknown variant {} with value {} passed", variant.bold(), value.bold())
         }
     }
 }
@@ -517,9 +520,9 @@ impl TuxVantage {
     pub fn get() -> anyhow::Result<Self> {
         project_paths::tuxvantage_toml()
             .pipe(fs::read_to_string)
-            .context("failed to read `tuxvantage.toml`")?
+            .with_context(|| format!("failed to read {}", "tuxvantage.toml".bold()))?
             .pipe_deref(toml::from_str)
-            .context("failed to deserialize contents of `tuxvantage.toml`")
+            .with_context(|| format!("failed to deserialize contents of {}", "tuxvantage.toml".bold()))
     }
 
     pub fn profile(&self) -> Option<&str> {
@@ -590,7 +593,8 @@ impl TuxVantage {
             .pipe_ref(toml::to_string)
             .context("failed to serialize the config")?;
 
-        fs::write(tuxvantage_toml, contents).context("failed to write to `tuxvantage.toml`")
+        fs::write(tuxvantage_toml, contents)
+            .with_context(|| format!("failed to write to {}", "tuxvantage.toml".bold()))
     }
 }
 
@@ -661,7 +665,7 @@ impl Config {
 
             debug!("write default `tuxvantage.toml` to path");
             fs::write(tuxvantage_toml, contents)
-                .context("failed to write to `tuxvantage.toml`")?;
+                .with_context(|| format!("failed to write to {}", "tuxvantage.toml".bold()))?;
         }
 
         EXISTENCE_ENSURED.store(true, Ordering::SeqCst);
@@ -678,7 +682,8 @@ impl Config {
 
         Ok((
             Self {
-                tuxvantage: TuxVantage::get().context("failed to get `tuxvantage.toml`")?,
+                tuxvantage: TuxVantage::get()
+                    .context("failed to get {}", "tuxvantage.toml".bold())?,
                 profiles,
             },
             errors,
@@ -711,7 +716,7 @@ impl Config {
         fn inner(this: &Config, profile: &str) -> anyhow::Result<Profile> {
             this.profiles
                 .find(profile)
-                .with_context(|| format!("the default profile '{}' does not exist", profile))
+                .with_context(|| format!("the default profile {} does not exist", profile.bold()))
         }
 
         Some(inner(self, self.tuxvantage.profile()?))

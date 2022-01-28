@@ -16,7 +16,7 @@ pub trait AcpiCallResultExt<T> {
 impl<T> AcpiCallResultExt<T> for acpi_call::Result<T> {
     fn resolve_tip(self) -> anyhow_with_tip::Result<T> {
         let tip = if let Err(acpi_call::Error::MethodNotFound { .. }) = &self {
-            Some("the currently used profile may not be supported for your system. use another then try again")
+            Some(ACPI_CALL_METHOD_NOT_FOUND_TIP)
         } else {
             None
         };
