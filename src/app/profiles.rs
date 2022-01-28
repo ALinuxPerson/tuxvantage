@@ -3,12 +3,12 @@ use crate::config::PossiblyBuiltInProfile;
 use crate::project_paths::profiles::ExternalProfile;
 use crate::{anyhow_with_tip, config, log, project_paths, TippingAnyhowResultExt};
 use anyhow::Context;
-use ideapad::{Profile, profile::Bit};
+use ideapad::profile::BitInner;
+use ideapad::{profile::Bit, Profile};
 use owo_colors::OwoColorize;
 use std::io::Read;
 use std::ops::Deref;
 use std::{fmt, fs, io};
-use ideapad::profile::BitInner;
 
 fn format_bits(name: impl fmt::Display, bit: Bit, indent: usize) {
     if let BitInner::Same(_) = bit.inner() {
@@ -179,21 +179,33 @@ pub fn get(name: Option<String>) -> anyhow::Result<MachineOutput> {
                 super::tab(4),
                 "Set To Intelligent Cooling".bold(),
                 profile.system_performance.parameters.intelligent_cooling,
-                format_args!("({:#010x})", profile.system_performance.parameters.intelligent_cooling).italic()
+                format_args!(
+                    "({:#010x})",
+                    profile.system_performance.parameters.intelligent_cooling
+                )
+                .italic()
             );
             info!(
                 "{}{} {} {}",
                 super::tab(4),
                 "Set To Extreme Performance".bold(),
                 profile.system_performance.parameters.extreme_performance,
-                format_args!("({:#010x})", profile.system_performance.parameters.extreme_performance).italic()
+                format_args!(
+                    "({:#010x})",
+                    profile.system_performance.parameters.extreme_performance
+                )
+                .italic()
             );
             info!(
                 "{}{} {} {}",
                 super::tab(4),
                 "Set To Battery Saving".bold(),
                 profile.system_performance.parameters.battery_saving,
-                format_args!("({:#010x})", profile.system_performance.parameters.battery_saving).italic()
+                format_args!(
+                    "({:#010x})",
+                    profile.system_performance.parameters.battery_saving
+                )
+                .italic()
             );
             info!("{}{}", super::tab(2), "Battery".bold());
             info!(
@@ -266,7 +278,10 @@ pub fn get_default() -> anyhow::Result<MachineOutput> {
         }
         None => {
             debug!("no default profile found in config, bailing out");
-            anyhow::bail!("there is no default profile declared in {}", "tuxvantage.toml".bold())
+            anyhow::bail!(
+                "there is no default profile declared in {}",
+                "tuxvantage.toml".bold()
+            )
         }
     }
 }
@@ -345,7 +360,11 @@ pub fn set_default(name: String) -> anyhow::Result<()> {
         debug!("check if name '{}' exists as a profile", name);
         let mut profiles = config.profiles.with_built_ins();
         let name_exists_as_a_profile = profiles.any(|profile| profile.get().name == name);
-        anyhow::ensure!(name_exists_as_a_profile, "profile {} not found", name.bold());
+        anyhow::ensure!(
+            name_exists_as_a_profile,
+            "profile {} not found",
+            name.bold()
+        );
     }
 
     debug!("set the default profile to '{}' in memory", name);

@@ -14,7 +14,10 @@ const ORGANIZATION: &str = "ALinuxPerson";
 const APPLICATION: &str = "tuxvantage";
 
 pub fn initialize() -> anyhow::Result<()> {
-    debug!("initialize project directories, qualifier = '{}', organization = '{}', application = '{}'", QUALIFIER, ORGANIZATION, APPLICATION);
+    debug!(
+        "initialize project directories, qualifier = '{}', organization = '{}', application = '{}'",
+        QUALIFIER, ORGANIZATION, APPLICATION
+    );
     let project_dirs = ProjectDirs::from(QUALIFIER, ORGANIZATION, APPLICATION)
         .context("failed to get project directories")?;
 

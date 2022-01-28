@@ -1,13 +1,8 @@
-
-
 use std::str::FromStr;
-
-
 
 use crate::config::{Backtrace, BatteryLevel, BatteryMatches, CoolDown, Machine};
 use clap::Parser;
 use ideapad::{Handler, SystemPerformanceMode};
-
 
 #[derive(Debug)]
 pub struct FromStrHandler(pub Handler);
@@ -44,8 +39,6 @@ impl FromStr for FromStrSystemPerformanceMode {
         }
     }
 }
-
-
 
 /// A utility which brings some Windows exclusive functionality of the Lenovo Vantage software
 /// to Linux systems. Or... erhm... gives Linux the TuxVantage (not trademarked)

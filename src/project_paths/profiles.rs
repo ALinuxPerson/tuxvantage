@@ -37,7 +37,10 @@ impl Iterator for Profiles {
                 .context("failed to get the next entry of the profile directory")?
                 .path();
             let contents = fs::read_to_string(&path).with_context(|| {
-                format!("failed to read contents of profile {}", path.display().bold())
+                format!(
+                    "failed to read contents of profile {}",
+                    path.display().bold()
+                )
             })?;
 
             let profile = serde_json::from_str(&contents).with_context(|| {

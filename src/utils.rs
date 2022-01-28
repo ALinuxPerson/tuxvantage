@@ -1,9 +1,8 @@
-use std::fmt;
 use itertools::Itertools;
+use serde::{de, Deserialize, Serialize};
+use std::fmt;
 use std::ops::Not;
 use std::str::FromStr;
-use serde::{de, Deserialize, Serialize};
-
 
 pub fn dedup_error_chain_for_humans(error: anyhow::Error) -> String {
     error.chain().map(ToString::to_string).unique().join(": ")

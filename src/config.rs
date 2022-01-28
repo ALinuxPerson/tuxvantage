@@ -1,6 +1,8 @@
 use anyhow::Context;
+use battery::{Batteries, Battery};
 use ideapad::{Handler, Profile};
 use once_cell::sync::OnceCell;
+use owo_colors::OwoColorize;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -8,10 +10,8 @@ use std::ops::{Deref, Not, RangeInclusive};
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{env, fmt, fs};
 use std::time::Duration;
-use battery::{Batteries, Battery};
-use owo_colors::OwoColorize;
+use std::{env, fmt, fs};
 use tap::{Pipe, Tap};
 
 use crate::project_paths;
@@ -217,7 +217,8 @@ impl FromStr for Backtrace {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (panics, errors) = s.split_once(',')
+        let (panics, errors) = s
+            .split_once(',')
             .with_context(|| format!("expected {} delimiter", ','.bold()))?;
         let panics = panics
             .parse::<u8>()
@@ -268,19 +269,25 @@ impl BatteryLevel {
         }
     }
 
-    pub const fn inner(self) -> u8 { self.0 }
+    pub const fn inner(self) -> u8 {
+        self.0
+    }
 }
 
 impl FromStr for BatteryLevel {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s
-            .trim_end_matches('%')
+        s.trim_end_matches('%')
             .parse::<u8>()
             .context("number given wasn't valid")?
             .pipe(Self::new)
-            .with_context(|| format!("{} is out of bounds (must be within 0 and 100 inclusive)", format_args!("{}%", s.bold())))
+            .with_context(|| {
+                format!(
+                    "{} is out of bounds (must be within 0 and 100 inclusive)",
+                    format_args!("{}%", s.bold())
+                )
+            })
     }
 }
 
@@ -307,7 +314,10 @@ impl FromStr for CoolDown {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        pub enum F64OrU64 { F64(f64), U64(u64) }
+        pub enum F64OrU64 {
+            F64(f64),
+            U64(u64),
+        }
 
         impl F64OrU64 {
             pub fn into_duration(self) -> Duration {
@@ -322,9 +332,7 @@ impl FromStr for CoolDown {
 
         s.parse::<f64>()
             .map(F64OrU64::F64)
-            .or_else(|_| s.parse::<u64>()
-                .map(F64OrU64::U64)
-            )
+            .or_else(|_| s.parse::<u64>().map(F64OrU64::U64))
             .map(F64OrU64::into_duration)
             .map(Self)
             .context("value wasn't a valid double or number")
@@ -360,7 +368,8 @@ pub enum BatteryMatches {
 
 impl BatteryMatches {
     pub fn find(&self, batteries: &mut Batteries) -> anyhow::Result<Option<Battery>> {
-        batteries.collect::<Result<Vec<_>, _>>()
+        batteries
+            .collect::<Result<Vec<_>, _>>()
             .context("failed to get list of batteries")?
             .into_iter()
             .enumerate()
@@ -369,7 +378,10 @@ impl BatteryMatches {
             .pipe(Ok)
     }
 
-    pub fn find_infallible(&self, batteries: &mut Batteries) -> (Option<Battery>, Vec<anyhow::Error>) {
+    pub fn find_infallible(
+        &self,
+        batteries: &mut Batteries,
+    ) -> (Option<Battery>, Vec<anyhow::Error>) {
         let mut errors = Vec::new();
         let mut battery = None;
 
@@ -384,7 +396,7 @@ impl BatteryMatches {
 
             if self.matches(index, &enumerated_battery) {
                 battery = Some(enumerated_battery);
-                break
+                break;
             }
         }
 
@@ -396,9 +408,14 @@ impl BatteryMatches {
             BatteryMatches::First if index == 0 => true,
             BatteryMatches::First => false,
             BatteryMatches::Index(this_index) => *this_index == index,
-            BatteryMatches::Vendor(vendor) => battery.vendor().map(|v| v == vendor).unwrap_or(false),
+            BatteryMatches::Vendor(vendor) => {
+                battery.vendor().map(|v| v == vendor).unwrap_or(false)
+            }
             BatteryMatches::Model(model) => battery.model().map(|m| m == model).unwrap_or(false),
-            BatteryMatches::SerialNumber(serial_number) => battery.serial_number().map(|s| s == serial_number).unwrap_or(false),
+            BatteryMatches::SerialNumber(serial_number) => battery
+                .serial_number()
+                .map(|s| s == serial_number)
+                .unwrap_or(false),
         }
     }
 }
@@ -407,16 +424,25 @@ impl FromStr for BatteryMatches {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.split_once('=')
-            .with_context(|| format!("delimit the variant and value with {}", '='.bold()))? {
+        match s
+            .split_once('=')
+            .with_context(|| format!("delimit the variant and value with {}", '='.bold()))?
+        {
             ("first" | "f", _) => Ok(BatteryMatches::First),
-            ("index" | "i", value) => value.parse()
+            ("index" | "i", value) => value
+                .parse()
                 .context("value wasn't a valid integer")
                 .map(BatteryMatches::Index),
             ("vendor" | "v", value) => Ok(BatteryMatches::Vendor(value.to_string())),
             ("model" | "m", value) => Ok(BatteryMatches::Model(value.to_string())),
-            ("serial_number" | "sn" | "s", value) => Ok(BatteryMatches::SerialNumber(value.to_string())),
-            (variant, value) => anyhow::bail!("unknown variant {} with value {} passed", variant.bold(), value.bold())
+            ("serial_number" | "sn" | "s", value) => {
+                Ok(BatteryMatches::SerialNumber(value.to_string()))
+            }
+            (variant, value) => anyhow::bail!(
+                "unknown variant {} with value {} passed",
+                variant.bold(),
+                value.bold()
+            ),
         }
     }
 }
@@ -446,30 +472,29 @@ impl BatteryConfig {
 
     pub fn threshold(&self) -> BatteryLevel {
         self.threshold
-            .map(|threshold| threshold.0.0)
+            .map(|threshold| threshold.0 .0)
             .unwrap_or(BatteryLevel::DEFAULT)
     }
 
     pub fn cooldown(&self) -> CoolDown {
         self.cooldown
-            .map(|cooldown| cooldown.0.0)
+            .map(|cooldown| cooldown.0 .0)
             .unwrap_or(CoolDown::DEFAULT)
     }
 
     pub fn get(&self) -> anyhow::Result<(Option<Battery>, Vec<anyhow::Error>)> {
         debug!("create battery manager");
-        let manager = battery::Manager::new()
-            .context("failed to create battery manager")?;
+        let manager = battery::Manager::new().context("failed to create battery manager")?;
 
         debug!("create battery iterator");
-        let mut batteries = manager.batteries()
-            .context("failed to get batteries")?;
+        let mut batteries = manager.batteries().context("failed to get batteries")?;
         let matches = self.matches();
 
         let (battery, errors) = if self.infallible {
             matches.find_infallible(&mut batteries)
         } else {
-            let battery = matches.find(&mut batteries)
+            let battery = matches
+                .find(&mut batteries)
                 .context("failed to find battery")?;
 
             (battery, Vec::new())
@@ -522,7 +547,12 @@ impl TuxVantage {
             .pipe(fs::read_to_string)
             .with_context(|| format!("failed to read {}", "tuxvantage.toml".bold()))?
             .pipe_deref(toml::from_str)
-            .with_context(|| format!("failed to deserialize contents of {}", "tuxvantage.toml".bold()))
+            .with_context(|| {
+                format!(
+                    "failed to deserialize contents of {}",
+                    "tuxvantage.toml".bold()
+                )
+            })
     }
 
     pub fn profile(&self) -> Option<&str> {
@@ -544,7 +574,12 @@ impl TuxVantage {
 
     pub fn battery_config(&self) -> BatteryConfig {
         BatteryConfig {
-            matches: self.overrides.battery.matches.clone().or_else(|| self.battery.matches.clone()),
+            matches: self
+                .overrides
+                .battery
+                .matches
+                .clone()
+                .or_else(|| self.battery.matches.clone()),
             infallible: self.overrides.battery.infallible || self.battery.infallible,
             threshold: self.overrides.battery.threshold.or(self.battery.threshold),
             cooldown: self.overrides.battery.cooldown.or(self.battery.cooldown),
@@ -655,7 +690,10 @@ impl Config {
             .context("failed to create the profiles directory")?;
 
         let tuxvantage_toml = project_paths::tuxvantage_toml();
-        debug!("`tuxvantage.toml` exists in '{}'", tuxvantage_toml.display());
+        debug!(
+            "`tuxvantage.toml` exists in '{}'",
+            tuxvantage_toml.display()
+        );
 
         if !tuxvantage_toml.exists() {
             debug!("serialize default `tuxvantage.toml`");

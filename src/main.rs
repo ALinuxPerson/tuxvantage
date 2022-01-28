@@ -8,13 +8,13 @@ mod anyhow_with_tip;
 mod app;
 mod args;
 mod config;
+mod context;
 mod ext;
 mod log;
 mod machine;
 mod project_paths;
 mod utils;
 mod verbose;
-mod context;
 
 use crate::anyhow_with_tip::TippingAnyhowResultExt;
 use crate::args::TuxVantageAction;
@@ -22,15 +22,15 @@ use crate::machine::Machine;
 use crate::utils::not;
 use anyhow::Context as AnyhowContext;
 use args::*;
+use ideapad::context::Context;
+use ideapad::{FallibleDropStrategies, Profile};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{io, process, thread};
-use ideapad::{FallibleDropStrategies, Profile};
 use tap::Pipe;
-use ideapad::context::Context;
 
 fn main() {
     static MACHINE: AtomicBool = AtomicBool::new(false);
@@ -127,8 +127,10 @@ fn main() {
                 };
 
                 debug!("setup up drop strategy");
-                let (fallible_drop_strategy, receiver) = FallibleDropStrategies::send_errors_to_receiver_on_error();
-                let context = Context::new(profile).with_fallible_drop_strategy(fallible_drop_strategy);
+                let (fallible_drop_strategy, receiver) =
+                    FallibleDropStrategies::send_errors_to_receiver_on_error();
+                let context =
+                    Context::new(profile).with_fallible_drop_strategy(fallible_drop_strategy);
 
                 thread::spawn(move || {
                     debug!("start drop strategy receiver thread");
@@ -160,10 +162,15 @@ fn main() {
                     }
                     TuxVantageBatteryConservation::Disable => app::battery_conservation::disable()
                         .map(app::MachineOutput::battery_conservation),
-                    TuxVantageBatteryConservation::Regulate { threshold, cooldown, infallible, matches } => {
-                        app::battery_conservation::regulate(threshold, cooldown, infallible, matches)
-                            .map(app::MachineOutput::battery_conservation)
-                    }
+                    TuxVantageBatteryConservation::Regulate {
+                        threshold,
+                        cooldown,
+                        infallible,
+                        matches,
+                    } => app::battery_conservation::regulate(
+                        threshold, cooldown, infallible, matches,
+                    )
+                    .map(app::MachineOutput::battery_conservation),
                 }
             }
             TuxVantageAction::SystemPerformance(system_performance) => match system_performance {
@@ -226,7 +233,7 @@ fn main() {
     }
 
     if result.is_err() {
-        debug!("main function returned an error") 
+        debug!("main function returned an error")
     }
 
     let machine = MACHINE.load(Ordering::SeqCst);

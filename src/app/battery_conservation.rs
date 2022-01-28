@@ -2,20 +2,20 @@ mod private {
     pub trait Sealed {}
 }
 
-use std::thread;
 use crate::app::IntoOptionMachineOutput;
+use ::log::LevelFilter;
 use anyhow::{anyhow, Context};
 use ideapad::Handler;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
-use ::log::LevelFilter;
+use std::thread;
 
 use crate::args::FromStrHandler;
-use crate::ext::AnyhowResultExt;
-use crate::{anyhow_with_tip, config, context, log, verbose};
 use crate::config::{BatteryConfig, BatteryLevel, BatteryMatches, CoolDown};
+use crate::ext::AnyhowResultExt;
 use crate::log::Level;
 use crate::utils::{DisplaySerializer, FromStrDeserializer};
+use crate::{anyhow_with_tip, config, context, log, verbose};
 
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -117,7 +117,12 @@ pub fn disable() -> anyhow_with_tip::Result<()> {
     Ok(())
 }
 
-pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, matches: Option<BatteryMatches>) -> anyhow_with_tip::Result<()> {
+pub fn regulate(
+    threshold: BatteryLevel,
+    cooldown: CoolDown,
+    infallible: bool,
+    matches: Option<BatteryMatches>,
+) -> anyhow_with_tip::Result<()> {
     let mut config = config::write();
     config.tuxvantage.overrides.battery = BatteryConfig {
         threshold: Some(FromStrDeserializer(DisplaySerializer(threshold))),
@@ -126,8 +131,7 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
         matches,
     };
     let battery_config = config.tuxvantage.battery_config();
-    let (battery, errors) = battery_config.get()
-        .context("failed to get battery")?;
+    let (battery, errors) = battery_config.get().context("failed to get battery")?;
 
     if !errors.is_empty() {
         warn!("errors occurred while retrieving battery information, see below");
@@ -142,9 +146,10 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
         None => {
             info!("failed to get battery information, here are the list of batteries that you could use");
             let r#try = || -> anyhow::Result<()> {
-                let manager = battery::Manager::new()
-                    .context("failed to create battery manager")?;
-                let batteries = manager.batteries()
+                let manager =
+                    battery::Manager::new().context("failed to create battery manager")?;
+                let batteries = manager
+                    .batteries()
                     .context("failed to get list of batteries")?;
                 let mut first = true;
 
@@ -155,20 +160,39 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
                             Ok(battery) => battery,
                             Err(error) => {
                                 warn!("skipping battery due to an error: {}", error);
-                                continue
+                                continue;
                             }
                         };
 
                         if first {
-                            info!("{} {}", format_args!("#{}", index).bold(), "(first)".italic());
+                            info!(
+                                "{} {}",
+                                format_args!("#{}", index).bold(),
+                                "(first)".italic()
+                            );
                             first = false
                         } else {
                             info!("{}", format_args!("#{}", index).bold())
                         }
 
-                        info!("{}{} {}", super::tab(2), "Vendor".bold(), battery.vendor().unwrap_or("N/A"));
-                        info!("{}{} {}", super::tab(2), "Model".bold(), battery.model().unwrap_or("N/A"));
-                        info!("{}{} {}", super::tab(2), "Serial Number".bold(), battery.serial_number().unwrap_or("N/A"));
+                        info!(
+                            "{}{} {}",
+                            super::tab(2),
+                            "Vendor".bold(),
+                            battery.vendor().unwrap_or("N/A")
+                        );
+                        info!(
+                            "{}{} {}",
+                            super::tab(2),
+                            "Model".bold(),
+                            battery.model().unwrap_or("N/A")
+                        );
+                        info!(
+                            "{}{} {}",
+                            super::tab(2),
+                            "Serial Number".bold(),
+                            battery.serial_number().unwrap_or("N/A")
+                        );
                     }
                 }
 
@@ -180,7 +204,7 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
                 warn!("{:#}", error)
             }
 
-            return Err(anyhow!("failed to get battery information").into())
+            return Err(anyhow!("failed to get battery information").into());
         }
     };
 
@@ -190,35 +214,47 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
         LevelFilter::Info
     };
 
-    env_logger::Builder::new()
-        .filter_level(level_filter)
-        .init();
+    env_logger::Builder::new().filter_level(level_filter).init();
 
     let cooldown = battery_config.cooldown().0;
     let threshold = battery_config.threshold().inner();
     let handler = config.tuxvantage.handlers().battery_conservation();
     let mut battery_conservation = context::get().controllers().battery_conservation();
 
-    ::log::info!("the cooldown is {} second(s)", cooldown.as_secs_f64().bold());
-    ::log::info!("the threshold for the battery is {}", format_args!("{}%", threshold.bold()));
+    ::log::info!(
+        "the cooldown is {} second(s)",
+        cooldown.as_secs_f64().bold()
+    );
+    ::log::info!(
+        "the threshold for the battery is {}",
+        format_args!("{}%", threshold.bold())
+    );
 
     loop {
         let battery_level = (battery.state_of_charge().value * 100.0).round() as u8;
-        ::log::info!("current battery level is {}", format_args!("{}%", battery_level.bold()));
+        ::log::info!(
+            "current battery level is {}",
+            format_args!("{}%", battery_level.bold())
+        );
 
         let battery_level_ge_threshold = battery_level >= threshold;
-        ::log::debug!("battery level >= threshold = {}", battery_level_ge_threshold);
+        ::log::debug!(
+            "battery level >= threshold = {}",
+            battery_level_ge_threshold
+        );
 
         if battery_level >= threshold {
             ::log::info!("battery level is greater than or equal to the provided threshold, enabling battery conservation mode");
-            battery_conservation.enable()
+            battery_conservation
+                .enable()
                 .handler(handler)
                 .now()
                 .context("failed to enable battery conservation")
                 .maybe_acpi_call_tip()?
         } else {
             ::log::info!("battery level is less than the provided threshold, disabling battery conservation mode");
-            battery_conservation.disable()
+            battery_conservation
+                .disable()
                 .context("failed to disable battery conservation")
                 .maybe_acpi_call_tip()?
         }
