@@ -683,7 +683,7 @@ impl Config {
         Ok((
             Self {
                 tuxvantage: TuxVantage::get()
-                    .context("failed to get {}", "tuxvantage.toml".bold())?,
+                    .with_context(|| format!("failed to get {}", "tuxvantage.toml".bold()))?,
                 profiles,
             },
             errors,
