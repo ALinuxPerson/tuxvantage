@@ -20,7 +20,7 @@ use crate::anyhow_with_tip::TippingAnyhowResultExt;
 use crate::args::TuxVantageAction;
 use crate::machine::Machine;
 use crate::utils::not;
-use anyhow::Context;
+use anyhow::Context as AnyhowContext;
 use args::*;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
@@ -30,6 +30,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{io, process, thread};
 use ideapad::{fallible_drop_strategy, FallibleDropStrategies, Profile};
 use tap::Pipe;
+use ideapad::context::Context;
 
 fn main() {
     static MACHINE: AtomicBool = AtomicBool::new(false);
@@ -126,7 +127,7 @@ fn main() {
                 };
 
                 let (fallible_drop_strategy, receiver) = FallibleDropStrategies::send_errors_to_receiver_on_error();
-                let context = ideapad::context::Context::new(profile).with_fallible_drop_strategy(fallible_drop_strategy);
+                let context = Context::new(profile).with_fallible_drop_strategy(fallible_drop_strategy);
 
                 thread::spawn(move || {
                     for error in receiver {
