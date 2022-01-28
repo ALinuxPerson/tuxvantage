@@ -126,12 +126,15 @@ fn main() {
                     }
                 };
 
+                debug!("setup up drop strategy");
                 let (fallible_drop_strategy, receiver) = FallibleDropStrategies::send_errors_to_receiver_on_error();
                 let context = Context::new(profile).with_fallible_drop_strategy(fallible_drop_strategy);
 
                 thread::spawn(move || {
+                    debug!("start drop strategy receiver thread");
                     for error in receiver {
                         error!("failed to drop something: {}", error);
+                        debug!("debug representation of the drop error: {:#?}", error);
                     }
                 });
 
@@ -250,6 +253,7 @@ fn main() {
             0
         }
         Err(error) => {
+            debug!("debug representation of the main error: {:#?}", error);
             if machine {
                 let output = Machine::<()>::failure(error)
                     .pipe_ref(serde_json::to_string)
