@@ -42,8 +42,8 @@ pub fn set(mode: FromStrSystemPerformanceMode) -> anyhow_with_tip::Result<()> {
     ideapad::system_performance::set(context::get(), mode)
         .with_context(|| {
             format!(
-                "failed to set the system performance mode to '{}'",
-                super::format_system_performance_mode_plain(mode)
+                "failed to set the system performance mode to {}",
+                super::format_system_performance_mode(mode)
             )
         })
         .maybe_acpi_call_tip()?;

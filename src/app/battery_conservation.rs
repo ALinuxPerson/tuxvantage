@@ -2,7 +2,6 @@ mod private {
     pub trait Sealed {}
 }
 
-use std::fmt::Debug;
 use std::thread;
 use crate::app::IntoOptionMachineOutput;
 use anyhow::{anyhow, Context};
@@ -200,12 +199,12 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
     let handler = config.tuxvantage.handlers().battery_conservation();
     let mut battery_conservation = context::get().controllers().battery_conservation();
 
-    ::log::info!("the cooldown is {} second(s)", cooldown.as_secs_f64());
-    ::log::info!("the threshold for the battery is {}%", threshold);
+    ::log::info!("the cooldown is {} second(s)", cooldown.as_secs_f64().bold());
+    ::log::info!("the threshold for the battery is {}", format_args!("{}%", threshold.bold()));
 
     loop {
         let battery_level = (battery.state_of_charge().value * 100.0).round() as u8;
-        ::log::info!("current battery level is {}%", battery_level);
+        ::log::info!("current battery level is {}", format_args!("{}%", battery_level.bold()));
 
         let battery_level_ge_threshold = battery_level >= threshold;
         ::log::debug!("battery level >= threshold = {}", battery_level_ge_threshold);
@@ -229,7 +228,7 @@ pub fn regulate(threshold: BatteryLevel, cooldown: CoolDown, infallible: bool, m
             ::log::warn!("failed to refresh battery: {}", error)
         }
 
-        ::log::debug!("sleeping for {} second(s)", cooldown.as_secs_f64());
+        ::log::debug!("sleeping for {} second(s)", cooldown.as_secs_f64().bold());
         thread::sleep(cooldown)
     }
 }
