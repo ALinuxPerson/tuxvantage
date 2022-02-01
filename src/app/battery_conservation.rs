@@ -2,17 +2,17 @@ mod private {
     pub trait Sealed {}
 }
 
-use std::path::Path;
 use crate::app::IntoOptionMachineOutput;
 use ::log::LevelFilter;
 use anyhow::{anyhow, Context};
 use ideapad::Handler;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
-use std::{env, fs, thread};
-use std::process::Command;
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
+use std::path::Path;
+use std::process::Command;
+use std::{env, fs, thread};
 use tap::Pipe;
 
 use crate::args::FromStrHandler;
@@ -133,21 +133,31 @@ pub fn regulate(
 
     if install {
         if !utils::is_systemd()? {
-            return Err(anyhow::anyhow!("you can only install this service on systems which use the systemd init system").into())
+            return Err(anyhow::anyhow!(
+                "you can only install this service on systems which use the systemd init system"
+            )
+            .into());
         }
 
         // todo: allow changing of the service name
         let path = Path::new("/etc/systemd/system/bcm.service");
-        info!("installing battery conservation regulator service to {}", path.display().bold());
+        info!(
+            "installing battery conservation regulator service to {}",
+            path.display().bold()
+        );
 
         // todo: maybe we could put a consistency check here in some hidden configuration file?
-        let tuxvantage_exe = env::current_exe()
-            .context("failed to get current path to executable")?;
+        let tuxvantage_exe =
+            env::current_exe().context("failed to get current path to executable")?;
 
         debug!("path to tuxvantage exe is: {}", tuxvantage_exe.display());
 
-        let tuxvantage_exe_str = tuxvantage_exe.to_str()
-            .with_context(|| format!("path to tuxvantage ({}) contains invalid utf-8", tuxvantage_exe.display().bold()))?;
+        let tuxvantage_exe_str = tuxvantage_exe.to_str().with_context(|| {
+            format!(
+                "path to tuxvantage ({}) contains invalid utf-8",
+                tuxvantage_exe.display().bold()
+            )
+        })?;
 
         let contents = format!(
             include_str!("../../assets/bcm.service"),
@@ -159,10 +169,13 @@ pub fn regulate(
         fs::write(path, contents).context("failed to write content into file")?;
 
         debug!("setting regulator service installed bit to be true");
-        config.consistency.mutate_then_dump(move |consistency| {
-            consistency.regulator_service_installed = true;
-            consistency.last_exe = Some(tuxvantage_exe);
-        }).context("failed to dump consistency configuration")?;
+        config
+            .consistency
+            .mutate_then_dump(move |consistency| {
+                consistency.regulator_service_installed = true;
+                consistency.last_exe = Some(tuxvantage_exe);
+            })
+            .context("failed to dump consistency configuration")?;
 
         info!("reloading the systemd daemon");
         let daemon_reload_successful = Command::new("systemctl")
@@ -174,10 +187,10 @@ pub fn regulate(
             .success();
 
         if !daemon_reload_successful {
-            return Err(anyhow::anyhow!("reloading the systemd daemon wasn't successful").into())
+            return Err(anyhow::anyhow!("reloading the systemd daemon wasn't successful").into());
         }
 
-        return Ok(())
+        return Ok(());
     }
 
     config.tuxvantage.overrides.battery = BatteryConfig {

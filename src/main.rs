@@ -87,7 +87,9 @@ fn main() {
 
                 match config.consistency.last_exe.as_ref() {
                     Some(last_exe) => {
-                        if config.consistency.regulator_service_installed && (last_exe != &current_exe) {
+                        if config.consistency.regulator_service_installed
+                            && (last_exe != &current_exe)
+                        {
                             warn!(
                                 "the last executable used to install the battery conservation regulator service, {}, differs from the current executable location \
 running this program, {}.\n\n\
@@ -98,7 +100,7 @@ if this is the case, try running {} again.",
                                 "tuxvantage battery-conservation regulate -I".bold()
                             )
                         }
-                    },
+                    }
                     None => {
                         debug!("no last exe found, setting it to current exe");
                         config.consistency.last_exe = Some(current_exe);
