@@ -10,6 +10,7 @@ use ideapad::Handler;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
 use std::{env, fs, thread};
+use std::process::Command;
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
 use tap::Pipe;
@@ -128,6 +129,8 @@ pub fn regulate(
     matches: Option<BatteryMatches>,
     install: bool,
 ) -> anyhow_with_tip::Result<()> {
+    let mut config = config::write();
+
     if install {
         if !utils::is_systemd()? {
             return Err(anyhow::anyhow!("you can only install this service on systems which use the systemd init system").into())
@@ -153,10 +156,21 @@ pub fn regulate(
         debug!("contents to write are:\n {}", contents);
 
         fs::write(path, contents).context("failed to write content into file")?;
+
+        debug!("setting regulator service installed bit to be true");
+        config.consistency.mutate_then_dump(|consistency| {
+            consistency.regulator_service_installed = true;
+        }).context("failed to dump consistency configuration")?;
+
+        info!("reloading the systemd daemon");
+        Command::new("systemctl")
+            .arg("daemon-reload")
+            .spawn()
+            .context("failed to reload the systemd daemon (command was systemctl daemon-reload)")?;
+
         return Ok(())
     }
 
-    let mut config = config::write();
     config.tuxvantage.overrides.battery = BatteryConfig {
         threshold: Some(FromStrDeserializer(DisplaySerializer(threshold))),
         cooldown: Some(FromStrDeserializer(DisplaySerializer(cooldown))),
