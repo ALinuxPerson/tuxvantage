@@ -136,6 +136,7 @@ pub fn regulate(
             return Err(anyhow::anyhow!("you can only install this service on systems which use the systemd init system").into())
         }
 
+        // todo: allow changing of the service name
         let path = Path::new("/etc/systemd/system/bcm.service");
         info!("installing battery conservation regulator service to {}", path.display().bold());
 
