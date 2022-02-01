@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 static PROJECT_DIRS: OnceCell<ProjectDirs> = OnceCell::new();
 static PROFILES_DIR: Lazy<PathBuf> = Lazy::new(|| config_dir().join("profiles"));
 static TUXVANTAGE_TOML: Lazy<PathBuf> = Lazy::new(|| config_dir().join("tuxvantage.toml"));
+static CONSISTENCY_JSON: Lazy<PathBuf> = Lazy::new(|| config_dir().join(".consistency.json"));
 const QUALIFIER: &str = "com";
 const ORGANIZATION: &str = "ALinuxPerson";
 const APPLICATION: &str = "tuxvantage";
@@ -42,6 +43,10 @@ pub fn profiles_dir() -> &'static Path {
 
 pub fn tuxvantage_toml() -> &'static Path {
     TUXVANTAGE_TOML.as_ref()
+}
+
+pub fn consistency_json() -> &'static Path {
+    CONSISTENCY_JSON.as_ref()
 }
 
 pub fn profiles() -> anyhow::Result<Profiles> {
