@@ -1,0 +1,8 @@
+[Unit]
+Description=Regulate the battery
+
+[Service]
+ExecStart={tuxvantage_exe} battery-conservation regulate
+
+[Install]
+WantedBy=multi-user.target

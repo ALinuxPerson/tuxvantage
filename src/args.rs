@@ -137,6 +137,10 @@ pub enum TuxVantageBatteryConservation {
         /// How to find the desired battery.
         #[clap(short, long)]
         matches: Option<BatteryMatches>,
+
+        /// Install the battery regulation service. Assumes you're using SystemD.
+        #[clap(short = 'I', long)]
+        install: bool,
     },
 }
 

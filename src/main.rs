@@ -167,8 +167,9 @@ fn main() {
                         cooldown,
                         infallible,
                         matches,
+                        install,
                     } => app::battery_conservation::regulate(
-                        threshold, cooldown, infallible, matches,
+                        threshold, cooldown, infallible, matches, install,
                     )
                     .map(app::MachineOutput::battery_conservation),
                 }

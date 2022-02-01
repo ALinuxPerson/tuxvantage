@@ -1,10 +1,13 @@
 use itertools::Itertools;
 use serde::{de, Deserialize, Serialize};
-use std::{fmt, thread};
+use std::{fmt, thread, io};
 use std::ops::Not;
+use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
+use anyhow::Context;
 use crossbeam::channel::Receiver;
+use owo_colors::OwoColorize;
 
 pub fn dedup_error_chain_for_humans(error: anyhow::Error) -> String {
     error.chain().map(ToString::to_string).unique().join(": ")
@@ -99,4 +102,13 @@ pub fn sleep(duration: Duration) -> Receiver<()> {
     });
 
     receiver
+}
+
+pub fn is_systemd() -> anyhow::Result<bool> {
+    match Path::new("/run/systemd/system").metadata() {
+        Ok(_) => Ok(true),
+        Err(error) if matches!(error.kind(), io::ErrorKind::NotFound) => Ok(false),
+        Err(error) => Err(error)
+            .with_context(|| format!("failed to check if the current init system is {}", "systemd".bold()))
+    }
 }

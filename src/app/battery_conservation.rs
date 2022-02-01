@@ -2,15 +2,17 @@ mod private {
     pub trait Sealed {}
 }
 
+use std::path::Path;
 use crate::app::IntoOptionMachineOutput;
 use ::log::LevelFilter;
 use anyhow::{anyhow, Context};
 use ideapad::Handler;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
-use std::thread;
+use std::{env, fs, thread};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
+use tap::Pipe;
 
 use crate::args::FromStrHandler;
 use crate::config::{BatteryConfig, BatteryLevel, BatteryMatches, CoolDown};
@@ -124,7 +126,32 @@ pub fn regulate(
     cooldown: CoolDown,
     infallible: bool,
     matches: Option<BatteryMatches>,
+    install: bool,
 ) -> anyhow_with_tip::Result<()> {
+    if install {
+        let path = Path::new("/etc/systemd/system/bcm.service");
+        info!("installing battery conservation regulator service to {}", path.display().bold());
+
+        // todo: maybe we could put a consistency check here in some hidden configuration file?
+        let tuxvantage_exe = env::current_exe()
+            .context("failed to get current path to executable")?;
+
+        debug!("path to tuxvantage exe is: {}", tuxvantage_exe.display());
+
+        let tuxvantage_exe = tuxvantage_exe.to_str()
+            .with_context(|| format!("path to tuxvantage ({}) contains invalid utf-8", tuxvantage_exe.display().bold()))?;
+
+        let contents = format!(
+            include_str!("../../assets/bcm.service"),
+            tuxvantage_exe = tuxvantage_exe,
+        );
+
+        debug!("contents to write are:\n {}", contents);
+
+        fs::write(path, contents).context("failed to write content into file")?;
+        return Ok(())
+    }
+
     let mut config = config::write();
     config.tuxvantage.overrides.battery = BatteryConfig {
         threshold: Some(FromStrDeserializer(DisplaySerializer(threshold))),
