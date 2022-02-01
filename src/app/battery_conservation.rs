@@ -9,13 +9,15 @@ use ideapad::Handler;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
 use std::thread;
+use signal_hook::consts::{SIGINT, SIGTERM};
+use signal_hook::iterator::Signals;
 
 use crate::args::FromStrHandler;
 use crate::config::{BatteryConfig, BatteryLevel, BatteryMatches, CoolDown};
 use crate::ext::AnyhowResultExt;
 use crate::log::Level;
 use crate::utils::{DisplaySerializer, FromStrDeserializer};
-use crate::{anyhow_with_tip, config, context, log, verbose};
+use crate::{anyhow_with_tip, config, context, log, utils, verbose};
 
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -230,6 +232,16 @@ pub fn regulate(
         format_args!("{}%", threshold.bold())
     );
 
+    let (signal_sender, signal_receiver) = crossbeam::channel::bounded(1);
+    let mut signals = Signals::new([SIGTERM, SIGINT])
+        .context("failed to register handler for application exits")?;
+
+    thread::spawn(move || {
+        for _ in signals.forever() {
+            signal_sender.send(()).unwrap();
+        }
+    });
+
     loop {
         let battery_level = (battery.state_of_charge().value * 100.0).round() as u8;
         ::log::info!(
@@ -265,6 +277,22 @@ pub fn regulate(
         }
 
         ::log::debug!("sleeping for {} second(s)", cooldown.as_secs_f64().bold());
-        thread::sleep(cooldown)
+        let sleep_receiver = utils::sleep(cooldown);
+
+        crossbeam::select! {
+            recv(sleep_receiver) -> _ => continue,
+            recv(signal_receiver) -> _ => {
+                ::log::info!("received signal to terminate the current program, exiting cleanly");
+                ::log::info!("enabling battery conservation mode");
+
+                battery_conservation
+                    .enable()
+                    .handler(handler)
+                    .now()
+                    .context("failed to enable battery conservation")
+                    .maybe_acpi_call_tip()?;
+                break Ok(())
+            }
+        }
     }
 }

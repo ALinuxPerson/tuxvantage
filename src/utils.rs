@@ -1,8 +1,10 @@
 use itertools::Itertools;
 use serde::{de, Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, thread};
 use std::ops::Not;
 use std::str::FromStr;
+use std::time::Duration;
+use crossbeam::channel::Receiver;
 
 pub fn dedup_error_chain_for_humans(error: anyhow::Error) -> String {
     error.chain().map(ToString::to_string).unique().join(": ")
@@ -86,4 +88,15 @@ where
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.parse::<T>().map(Self)
     }
+}
+
+pub fn sleep(duration: Duration) -> Receiver<()> {
+    let (sender, receiver) = crossbeam::channel::bounded(1);
+
+    thread::spawn(move || {
+        thread::sleep(duration);
+        sender.send(()).expect("failed to send sleep event");
+    });
+
+    receiver
 }
