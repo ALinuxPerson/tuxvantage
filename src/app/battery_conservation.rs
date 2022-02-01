@@ -14,7 +14,6 @@ use std::path::Path;
 use std::process::Command;
 use std::{env, fs, thread};
 
-
 use crate::args::FromStrHandler;
 use crate::config::{BatteryConfig, BatteryLevel, BatteryMatches, CoolDown};
 use crate::ext::AnyhowResultExt;
