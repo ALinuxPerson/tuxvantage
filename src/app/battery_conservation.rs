@@ -145,12 +145,12 @@ pub fn regulate(
 
         debug!("path to tuxvantage exe is: {}", tuxvantage_exe.display());
 
-        let tuxvantage_exe = tuxvantage_exe.to_str()
+        let tuxvantage_exe_str = tuxvantage_exe.to_str()
             .with_context(|| format!("path to tuxvantage ({}) contains invalid utf-8", tuxvantage_exe.display().bold()))?;
 
         let contents = format!(
             include_str!("../../assets/bcm.service"),
-            tuxvantage_exe = tuxvantage_exe,
+            tuxvantage_exe = tuxvantage_exe_str,
         );
 
         debug!("contents to write are:\n {}", contents);
@@ -158,8 +158,9 @@ pub fn regulate(
         fs::write(path, contents).context("failed to write content into file")?;
 
         debug!("setting regulator service installed bit to be true");
-        config.consistency.mutate_then_dump(|consistency| {
+        config.consistency.mutate_then_dump(move |consistency| {
             consistency.regulator_service_installed = true;
+            consistency.last_exe = Some(tuxvantage_exe);
         }).context("failed to dump consistency configuration")?;
 
         info!("reloading the systemd daemon");
