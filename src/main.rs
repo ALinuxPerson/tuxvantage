@@ -29,7 +29,7 @@ use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{io, process, thread};
+use std::{env, io, process, thread};
 use tap::Pipe;
 
 fn main() {
@@ -77,6 +77,34 @@ fn main() {
         // since we're operating with an `RwLock` otherwise we'll get a deadlock
         {
             let mut config = config::write();
+
+            if !args.skip_consistency_checks {
+                debug!("starting consistency checks");
+
+                let current_exe = env::current_exe()
+                    .context("failed to get current executable location of tuxvantage")?;
+                debug!("current exe location is '{}'", current_exe.display());
+
+                match config.consistency.last_exe.as_ref() {
+                    Some(last_exe) => {
+                        if config.consistency.regulator_service_installed && (last_exe != &current_exe) {
+                            warn!(
+                                "the last executable used to install the battery conservation regulator service, {}, differs from the current executable location\
+running this program, {}.\n\n\
+this behavior may be undesirable, since the battery conservation regulator service may fail to run with a no such file or directory error.\n\
+if this is the case, try running {} again.",
+                                last_exe.display().bold(),
+                                current_exe.display().bold(),
+                                "tuxvantage battery-conservation regulate -I".bold()
+                            )
+                        }
+                    },
+                    None => {
+                        debug!("no last exe found, setting it to current exe");
+                        config.consistency.last_exe = Some(current_exe);
+                    }
+                }
+            }
 
             debug!("setup config overrides from arguments");
             config.tuxvantage.overrides.machine = args.machine;

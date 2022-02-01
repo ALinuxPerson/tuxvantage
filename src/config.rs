@@ -7,7 +7,7 @@ use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::borrow::Cow;
 use std::ops::{Deref, Not, RangeInclusive};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -696,11 +696,17 @@ possible modification from the end-user perhaps?", Self::COMMENT)
 #[derive(Serialize, Deserialize)]
 pub struct Consistency {
     _comment: Comment,
+    pub last_exe: Option<PathBuf>,
+
+    #[serde(default)]
+    pub regulator_service_installed: bool,
 }
 
 impl Consistency {
     pub const DEFAULT: Self = Self {
-        _comment: Comment { _priv: () }
+        _comment: Comment { _priv: () },
+        last_exe: None,
+        regulator_service_installed: false,
     };
 
     pub fn get() -> anyhow::Result<Self> {
@@ -715,6 +721,23 @@ impl Consistency {
                     ".consistency.json".bold()
                 )
             })
+    }
+
+    pub fn dump(&self) -> anyhow::Result<()> {
+        let contents = self
+            .pipe_ref(serde_json::to_string)
+            .context("failed to serialize the consistency config")?;
+
+        fs::write(project_paths::consistency_json(), contents)
+            .with_context(|| format!("failed to write to {}", ".consistency.json".bold()))
+    }
+
+    pub fn mutate_then_dump<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> anyhow::Result<T> {
+        let result = f(self);
+
+        self.dump()?;
+
+        Ok(result)
     }
 }
 

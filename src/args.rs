@@ -70,6 +70,10 @@ pub struct TuxVantage {
     /// Enable verbose output.
     #[clap(short, long)]
     pub verbose: bool,
+    
+    /// Skip consistency checks. Should be used for debugging purposes only.
+    #[clap(short, long)]
+    pub skip_consistency_checks: bool,
 
     #[clap(subcommand)]
     pub action: TuxVantageAction,
