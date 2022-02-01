@@ -129,6 +129,10 @@ pub fn regulate(
     install: bool,
 ) -> anyhow_with_tip::Result<()> {
     if install {
+        if !utils::is_systemd()? {
+            return Err(anyhow::anyhow!("you can only install this service on systems which use the systemd init system").into())
+        }
+
         let path = Path::new("/etc/systemd/system/bcm.service");
         info!("installing battery conservation regulator service to {}", path.display().bold());
 
