@@ -163,10 +163,17 @@ pub fn regulate(
         }).context("failed to dump consistency configuration")?;
 
         info!("reloading the systemd daemon");
-        Command::new("systemctl")
+        let daemon_reload_successful = Command::new("systemctl")
             .arg("daemon-reload")
             .spawn()
-            .context("failed to reload the systemd daemon (command was systemctl daemon-reload)")?;
+            .context("failed to reload the systemd daemon (command was systemctl daemon-reload)")?
+            .wait()
+            .context("failed to wait on reloading the systemd daemon (command was systemctl daemon-reload)")?
+            .success();
+
+        if !daemon_reload_successful {
+            return Err(anyhow::anyhow!("reloading the systemd daemon wasn't successful").into())
+        }
 
         return Ok(())
     }
