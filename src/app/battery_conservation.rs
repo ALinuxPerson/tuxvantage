@@ -13,7 +13,7 @@ use signal_hook::iterator::Signals;
 use std::path::Path;
 use std::process::Command;
 use std::{env, fs, thread};
-use tap::Pipe;
+
 
 use crate::args::FromStrHandler;
 use crate::config::{BatteryConfig, BatteryLevel, BatteryMatches, CoolDown};
