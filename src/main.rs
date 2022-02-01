@@ -89,7 +89,7 @@ fn main() {
                     Some(last_exe) => {
                         if config.consistency.regulator_service_installed && (last_exe != &current_exe) {
                             warn!(
-                                "the last executable used to install the battery conservation regulator service, {}, differs from the current executable location\
+                                "the last executable used to install the battery conservation regulator service, {}, differs from the current executable location \
 running this program, {}.\n\n\
 this behavior may be undesirable, since the battery conservation regulator service may fail to run with a no such file or directory error.\n\
 if this is the case, try running {} again.",
