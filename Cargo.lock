@@ -350,7 +350,7 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 [[package]]
 name = "ideapad"
 version = "0.1.0"
-source = "git+https://github.com/ALinuxPerson/ideapad.git?branch=try-drop#0b10e027c289fa04313a68d1b2ae94280ec4f784"
+source = "git+https://github.com/ALinuxPerson/ideapad.git?branch=try-drop#24a67714e59ec055560ed554bbe25d11d9f9a1bc"
 dependencies = [
  "crossbeam",
  "once_cell",
@@ -885,7 +885,7 @@ dependencies = [
 [[package]]
 name = "try-drop"
 version = "0.1.0"
-source = "git+https://github.com/ALinuxPerson/try-drop.git#3a1a0f549d4795a9ed7a6779bfdd50a39dc8f2e9"
+source = "git+https://github.com/ALinuxPerson/try-drop.git#f289d9cfaf9a1ea0d83c3e8e58dd4ac7f8458deb"
 dependencies = [
  "anyhow",
  "downcast-rs",
