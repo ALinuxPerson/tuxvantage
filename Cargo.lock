@@ -885,7 +885,7 @@ dependencies = [
 [[package]]
 name = "try-drop"
 version = "0.1.0"
-source = "git+https://github.com/ALinuxPerson/try-drop.git#de4c3ccf0813489502b4724a4e5dbc4b5b9b7147"
+source = "git+https://github.com/ALinuxPerson/try-drop.git#3a1a0f549d4795a9ed7a6779bfdd50a39dc8f2e9"
 dependencies = [
  "anyhow",
  "downcast-rs",
@@ -920,7 +920,9 @@ dependencies = [
  "strip-ansi-escapes",
  "tap",
  "textwrap",
+ "tokio",
  "toml",
+ "try-drop",
 ]
 
 [[package]]

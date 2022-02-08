@@ -27,4 +27,6 @@ signal-hook = "0.3.13"
 strip-ansi-escapes = "0.1.1"
 tap = "1.0.1"
 textwrap = "0.14.2"
+tokio = { version = "1.16.1", features = ["sync"], default-features = false }
 toml = "0.5.8"
+try-drop = { git = "https://github.com/ALinuxPerson/try-drop.git" }
