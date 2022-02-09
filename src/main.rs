@@ -166,8 +166,11 @@ if this is the case, try running {} again.",
 
                 debug!("setup up drop strategy");
                 let (fallible_drop_strategy, mut receiver) = BroadcastDropStrategy::new(16);
-                let context =
-                    Context::new_with_strategies(profile, fallible_drop_strategy, PanicDropStrategy::default());
+                let context = Context::new_with_strategies(
+                    profile,
+                    fallible_drop_strategy,
+                    PanicDropStrategy::default(),
+                );
 
                 thread::spawn(move || {
                     debug!("start drop strategy receiver thread");
@@ -179,11 +182,11 @@ if this is the case, try running {} again.",
                             Ok(error) => {
                                 error!("failed to drop something: {error}");
                                 debug!("debug representation of the drop error:\n {error:#?}")
-                            },
+                            }
                             Err(RecvError::Lagged(count)) => {
                                 warn!("drop strategy receiver thread lagged too far behind: {count} skipped messages");
                                 warn!("continuing");
-                                continue
+                                continue;
                             }
                             Err(RecvError::Closed) => break,
                         }
