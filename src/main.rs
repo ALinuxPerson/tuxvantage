@@ -44,7 +44,13 @@ fn main() {
     fn inner() -> anyhow_with_tip::Result<Option<app::MachineOutput>> {
         let args = args::parse();
         verbose::set(args.verbose);
-        MACHINE.store(args.machine.unwrap_or_default().get(), Ordering::SeqCst);
+        debug!("hello world!");
+
+        let machine = args.machine.unwrap_or_default().get();
+        debug!("set global machine to {machine}");
+        MACHINE.store(machine, Ordering::SeqCst);
+
+        debug!("set global panic to {}", args.panic);
         PANIC.store(args.panic, Ordering::SeqCst);
 
         debug!("initialize project paths");
