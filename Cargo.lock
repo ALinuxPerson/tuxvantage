@@ -350,11 +350,9 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 [[package]]
 name = "ideapad"
 version = "0.1.0"
-source = "git+https://github.com/ALinuxPerson/ideapad.git?branch=try-drop#24a67714e59ec055560ed554bbe25d11d9f9a1bc"
+source = "git+https://github.com/ALinuxPerson/ideapad.git?branch=try-drop#fed2e5ea95b200e44f6f19cb330df4291f6d54e3"
 dependencies = [
- "crossbeam",
  "once_cell",
- "parking_lot 0.11.2",
  "serde",
  "smbios-lib",
  "tap",
@@ -885,7 +883,7 @@ dependencies = [
 [[package]]
 name = "try-drop"
 version = "0.1.0"
-source = "git+https://github.com/ALinuxPerson/try-drop.git#f289d9cfaf9a1ea0d83c3e8e58dd4ac7f8458deb"
+source = "git+https://github.com/ALinuxPerson/try-drop.git#4a47d3a1a682e6a8804fac8f831537d70b5dde4f"
 dependencies = [
  "anyhow",
  "downcast-rs",
