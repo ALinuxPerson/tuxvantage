@@ -14,7 +14,7 @@ color-backtrace = "0.5.1"
 crossbeam = "0.8.1"
 directories = "4.0.1"
 env_logger = "0.9.0"
-ideapad = { features = ["serde"], git = "https://github.com/ALinuxPerson/ideapad.git" }
+ideapad = { features = ["serde"], git = "https://github.com/ALinuxPerson/ideapad.git", branch = "try-drop" }
 itertools = "0.10.3"
 log = "0.4.14"
 once_cell = "1.9.0"
@@ -27,4 +27,6 @@ signal-hook = "0.3.13"
 strip-ansi-escapes = "0.1.1"
 tap = "1.0.1"
 textwrap = "0.14.2"
+tokio = { version = "1.16.1", features = ["sync"], default-features = false }
 toml = "0.5.8"
+try-drop = { git = "https://github.com/ALinuxPerson/try-drop.git" }

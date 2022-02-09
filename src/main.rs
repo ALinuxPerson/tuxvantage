@@ -22,8 +22,8 @@ use crate::machine::Machine;
 use crate::utils::not;
 use anyhow::Context as AnyhowContext;
 use args::*;
-use ideapad::context::Context;
-use ideapad::{FallibleDropStrategies, Profile};
+use context::Context;
+use ideapad::Profile;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use parking_lot::RwLockWriteGuard;
@@ -31,6 +31,8 @@ use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{env, io, process, thread};
 use tap::Pipe;
+use tokio::sync::broadcast::error::RecvError;
+use try_drop::drop_strategies::{BroadcastDropStrategy, PanicDropStrategy};
 
 fn main() {
     static MACHINE: AtomicBool = AtomicBool::new(false);
@@ -42,7 +44,13 @@ fn main() {
     fn inner() -> anyhow_with_tip::Result<Option<app::MachineOutput>> {
         let args = args::parse();
         verbose::set(args.verbose);
-        MACHINE.store(args.machine.unwrap_or_default().get(), Ordering::SeqCst);
+        debug!("hello world!");
+
+        let machine = args.machine.unwrap_or_default().get();
+        debug!("set global machine to {machine}");
+        MACHINE.store(machine, Ordering::SeqCst);
+
+        debug!("set global panic to {}", args.panic);
         PANIC.store(args.panic, Ordering::SeqCst);
 
         debug!("initialize project paths");
@@ -157,16 +165,31 @@ if this is the case, try running {} again.",
                 };
 
                 debug!("setup up drop strategy");
-                let (fallible_drop_strategy, receiver) =
-                    FallibleDropStrategies::send_errors_to_receiver_on_error();
-                let context =
-                    Context::new(profile).with_fallible_drop_strategy(fallible_drop_strategy);
+                let (fallible_drop_strategy, mut receiver) = BroadcastDropStrategy::new(16);
+                let context = Context::new_with_strategies(
+                    profile,
+                    fallible_drop_strategy,
+                    PanicDropStrategy::default(),
+                );
 
                 thread::spawn(move || {
                     debug!("start drop strategy receiver thread");
-                    for error in receiver {
-                        error!("failed to drop something: {}", error);
-                        debug!("debug representation of the drop error:\n {:#?}", error);
+
+                    loop {
+                        let recv = receiver.recv();
+
+                        match recv {
+                            Ok(error) => {
+                                error!("failed to drop something: {error}");
+                                debug!("debug representation of the drop error:\n {error:#?}")
+                            }
+                            Err(RecvError::Lagged(count)) => {
+                                warn!("drop strategy receiver thread lagged too far behind: {count} skipped messages");
+                                warn!("continuing");
+                                continue;
+                            }
+                            Err(RecvError::Closed) => break,
+                        }
                     }
                 });
 

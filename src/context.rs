@@ -1,5 +1,9 @@
-use ideapad::context::Context;
+use ideapad::context::Context as IdeapadContext;
 use once_cell::sync::OnceCell;
+use try_drop::drop_strategies::broadcast::NeedsReceivers;
+use try_drop::drop_strategies::{BroadcastDropStrategy, PanicDropStrategy};
+
+pub type Context = IdeapadContext<BroadcastDropStrategy<NeedsReceivers>, PanicDropStrategy>;
 
 static CONTEXT: OnceCell<Context> = OnceCell::new();
 
